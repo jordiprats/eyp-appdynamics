@@ -1,0 +1,19 @@
+serverHostName=<%= @ipaddr %>
+controllerConfig=<%= @controllerconfig %>
+controllerTenancyMode=<%= @tenacymode %>
+<% if (@tenacymode == "multi") -%>
+accountName=<%= @accountname %>
+accountAccessKey=<%= @accountkey %>
+<% end -%>
+haControllerType=<%= @hatype %>
+rootUserPassword=<%= @rootpw %>
+rootUserRePassword=<%= @rootpw %>
+userName=<%= @adminuser %>
+password=<%= @adminpw %>
+rePassword=<%= @adminpw %>
+sys.installationDir=<%= @basedir %>/<%= @installdir %>
+sys.languageId=en
+disableEULA=true
+enableUDC=<%= @enableudc %>
+mysqlRootUserPassword=<%= @mysqlrootpw %>
+realDataDir=<%= @basedir %>/<%= @installdir %>/db/data

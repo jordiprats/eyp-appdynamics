@@ -1,0 +1,143 @@
+#!/bin/bash
+#
+# chkconfig: - 59 73
+
+# Source function library.
+. /etc/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+prog=AppDynamics-<%= @machineagentname %>
+BASEMACHINEAGENT=<%= @basedir %>/<%= @machineagentname %>/
+
+PIDFILE=$BASEMACHINEAGENT/<%= @machineagentname %>.custom.pid
+
+<% if @uniquehostid -%>
+MACHINEAGENTOPTS="-Dappdynamics.agent.uniqueHostId=<%= @uniquehostid %>"
+<% end -%>
+
+JAVABIN=$(which java)
+if [ -z "$JAVABIN" ];
+then
+	echo "No java, no party"
+	exit 1
+fi
+
+if [ ! -d "$BASEMACHINEAGENT" ];
+then
+	echo "Invalid machine agent base"
+	exit 1
+fi
+
+start()
+{
+	nohup $JAVABIN $MACHINEAGENTOPTS -jar $BASEMACHINEAGENT/machineagent.jar >/dev/null 2>&1 &
+
+	echo $! > $PIDFILE
+
+	if [ ! -z "$(cat $PIDFILE)" ];
+	then
+		echo "started"
+		exit 0
+	else
+		echo "dunno bro"
+		exit 1
+	fi
+}
+
+stop()
+{
+	if [ -z "$(cat $PIDFILE)" ];
+	then
+		echo "no PID, no party"
+		exit 0
+	fi
+
+	if [ "$(ps -p $(cat $PIDFILE) | grep java | wc -l)" -ne 1 ];
+	then
+		echo "WTF bro!"
+		exit 1
+	fi
+
+	kill $(cat $PIDFILE)
+	rm $PIDFILE
+
+	echo "stopped"
+	exit 0
+}
+
+status()
+{
+	if [ -z "$(cat $PIDFILE 2>/dev/null)" ];
+		then
+		echo "stopped"
+		exit 1
+	fi
+
+	if [ "$(ps -p $(cat $PIDFILE) | grep java | wc -l)" -ne 1 ];
+	then
+		echo "stopped"
+		exit 1
+	else
+		echo "started"
+		exit 0
+	fi
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  status)
+	status
+	;;
+  restart|force-reload)
+	if [ -z "$(cat $PIDFILE)" ];
+	then
+		echo "no PID, no party"
+		exit 0
+	fi
+
+	if [ "$(ps -p $(cat $PIDFILE) | grep java | wc -l)" -ne 1 ];
+	then
+		echo "WTF bro!"
+		exit 1
+	fi
+
+	kill $(cat $PIDFILE)
+
+	if [ ! -z "$(cat $PIDFILE 2>/dev/null)" ];
+	then
+
+		COUNT=0
+		while [ "$(ps -p $(cat $PIDFILE) | grep java | wc -l)" -ge 1 ];
+		do
+			sleep 1
+			kill $PIDFILE
+
+			COUNT=$((COUNT+1))
+
+			if [ $COUNT -gt 5 ];
+			then
+				kill -9 $PIDFILE
+			fi
+
+			if [ $COUNT -gt 50 ];
+			then
+				exit 1
+			fi
+
+		done
+	fi
+
+	start
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	exit 2
+esac

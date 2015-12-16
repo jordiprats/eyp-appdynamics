@@ -1,0 +1,108 @@
+#!/bin/bash
+#
+# chkconfig: - 59 73
+
+# Source function library.
+. /etc/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+prog=AppDynamics-<%= @dbagentname %>
+BASEAPPDYN=<%= @controllerpath %>
+BASEDBAGENT=<%= @basedir %>/<%= @dbagentname %>
+
+JAVABIN=$(which java 2>/dev/null)
+if [ -z "$JAVABIN" ];
+then
+	echo "No java, no party"
+	exit 1
+fi
+
+if [ ! -x "${BASEAPPDYN}/bin/controller.sh" ];
+then
+  echo "controller not found"
+  exit 1
+fi
+
+start()
+{
+	if [ "$(ps -fea | grep java | grep events_service | wc -l)" -eq 0 ];
+	then
+		${BASEAPPDYN}/bin/controller.sh start-events-service
+	fi
+
+	nohup $JAVABIN -jar $BASEDBAGENT/db-agent.jar >/dev/null 2>&1 &
+
+	echo $! > $BASEDBAGENT/dbagent.custom.pid
+
+	if [ ! -z "$(cat $BASEDBAGENT/dbagent.custom.pid)" ];
+	then
+		echo "started"
+		exit 0
+	else
+		echo "dunno bro"
+		exit 1
+	fi
+}
+
+stop()
+{
+	${BASEAPPDYN}/bin/controller.sh stop-events-service
+
+	if [ -z "$(cat $BASEDBAGENT/dbagent.custom.pid)" ];
+	then
+		echo "no PID, no party"
+		exit 0
+	fi
+
+	if [ "$(ps -p $(cat $BASEDBAGENT/dbagent.custom.pid) | grep java | wc -l)" -ne 1 ];
+	then
+		echo "WTF bro!"
+		exit 1
+	fi
+
+	kill $(cat $BASEDBAGENT/dbagent.custom.pid)
+	rm $(cat $BASEDBAGENT/dbagent.custom.pid)
+
+	echo "stopped"
+	exit 0
+}
+
+status()
+{
+	if [ -z "$(cat $BASEDBAGENT/dbagent.custom.pid)" ];
+    then
+      echo "stopped"
+      exit 1
+    fi
+
+    if [ "$(ps -p $(cat $BASEDBAGENT/dbagent.custom.pid) | grep java | wc -l)" -ne 1 ];
+    then
+      echo "stopped"
+      exit 1
+  	else
+  		echo "started"
+  		exit 0
+    fi
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	 start
+	;;
+  stop)
+	 stop
+	;;
+  status)
+	 status
+	;;
+  restart|force-reload)
+  	stop
+  	start
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	 exit 2
+esac

@@ -1,0 +1,13 @@
+{
+  "name": "eyp-appdynamics",
+  "version": "0.1.31",
+  "author": "eyp",
+  "summary": "installs appdynamics controller and agent (some agent modules are also included)",
+  "license": "Apache-2.0",
+  "source": "",
+  "project_page": null,
+  "issues_url": null,
+  "dependencies": [
+    {"name":"puppetlabs/stdlib","version_requirement":">= 1.0.0"}
+  ]
+}
